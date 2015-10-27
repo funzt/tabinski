@@ -14,20 +14,18 @@
                   (.-parentNode elem)))
        (take-while some?)))
 
-(defn- get-tabinski-parent
-  "Get next parent that has tabinski information"
-  [tabinski-elems dom-elem]
-  (->> (parents-seq dom-elem)
-       (filter #(contains? tabinski-elems %))
-       first))
-
-(defn- get-tabinski-root
-  "Get current tabinski root"
+(defn- tabinski-parents
+  "Get tabinski parent groups of dom-elem"
   [tabinski-elems dom-elem]
   (->> (parents-seq dom-elem)
        (filter #(= :group
-                   (:type (get-in tabinski-elems [%]))))
-       last))
+                   (:type (get-in tabinski-elems [%]))))))
+
+(def ^:private get-tabinski-parent
+  (comp first tabinski-parents))
+
+(def ^:private get-tabinski-root
+  (comp last tabinski-parents))
 
 (defn- direct-tabinski-children
   "Direct tabinski children in the order they should be tabbed.  These
