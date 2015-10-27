@@ -11,53 +11,39 @@
 (defreact self-coloring-input [inst tab-key n]
   :state {:keys [focused?]}
   (fn render []
-    (html
-      [:input {:value n
-               :ref (tab/tab (:tabinski inst)
-                             {:key tab-key})
-               
-               :style {:background-color
-                       (if focused?
-                         "green")}
-               :on-focus
-               (fn [e]
-                 (m/set-state! this
-                               :focused? true))
-               :on-blur
-               (fn [e]
-                 (m/set-state! this
-                               :focused? false))}])))
+    (tab/tab
+     {:tab-id tab-key}
+     (html
+       [:input {:value n
+                :style {:background-color
+                        (if focused?
+                          "green")}
+                :on-focus
+                (fn [e]
+                  (m/set-state! this
+                                :focused? true))
+                :on-blur
+                (fn [e]
+                  (m/set-state! this
+                                :focused? false))}]))))
 
 (defreact main-ui [inst]
   (fn render []
-    (html
-      [:div {:ref (tab/tab (:tabinski inst)
-                           {:order [2 1 ]})
-             :style {:color "green"}} "Hello"
-       (for [x (range 1 4)]
-         [:div
-          {:ref (tab/tab (:tabinski inst)
-                         {:key x
-                          :order [2 1 3]})}
-          (for [y (range 1 4)]
-            (self-coloring-input inst y (* x y)))])])))
+    (tab/tab-group
+     {:order [2 1 3]
+      :dom-elem js/document}
+     (m/with-irefs [s tab/tabinski-state]
+       (html
+         [:div {:style {:color "green"}} "Hello"
+          [:div (pr-str s)]
+          (for [x (range 1 4)]
+            (tab/tab-group
+             {:tab-id x
+              :order [2 1 3]}
+             (html
+               [:div
+                (for [y (range 1 4)]
+                  (self-coloring-input inst y (* x y)))])))])))))
 
-(defonce instance nil)
-
-(defn start []
-  (let [inst {:tabinski (tab/start {})}]
-    (set! instance inst)
-    (js/React.render (main-ui inst)
-                     (js/document.getElementById "app"))))
-
-(defn stop []
-  (tab/stop (:tabinski instance)))
-
-(defn reset []
-  (if instance
-    (do
-      (stop)
-      (start))
-    (start)))
-
-(reset)
+(js/React.render (main-ui {})
+                 (js/document.getElementById "app"))
