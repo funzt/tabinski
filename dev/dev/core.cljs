@@ -29,10 +29,10 @@
 
 (defreact main-ui [inst]
   (fn render []
-    (tab/tab-group
-     {:order [2 1 3]
-      :dom-elem js/document}
-     (m/with-irefs [s tab/tabinski-state]
+    (m/with-irefs [s tab/tabinski-state]
+      (tab/tab-group
+       {:order [2 1 3]
+        :dom-elem js/document}
        (html
          [:div {:style {:color "green"}} "Hello"
           [:div (pr-str s)]
