@@ -172,7 +172,13 @@
       (swap! tabinski-state update :tabinski-elems dissoc cdom-node)))
   (fn render [] child))
 
-(defreact tab [opts child]
+(defreact tab
+  "Must wrap a child that can be focused.  The following opts are
+  supported:
+
+  :tab-id - local identifier that can be used in a parent
+            tab-groups :order"
+  [opts child]
   (fn componentDidMount []
     ;; add child to tabinski-elems
     (let [dom-elem (.getDOMNode this)]
@@ -191,6 +197,9 @@
              merge
              {:key (:tab-id next-opts)})))
   (fn componentWillUnmount []
+    (when (= (:current-elem @tabinski-state)
+             (.getDOMNode this))
+      (exec-tab false))
     (swap! tabinski-state
            update :tabinski-elems
            dissoc (.getDOMNode this)))
