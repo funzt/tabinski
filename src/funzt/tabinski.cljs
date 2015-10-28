@@ -77,7 +77,8 @@
         (swap! tabinski-state
                (fn [{:keys [current-elem tabinski-elems]
                      :as state}]
-                 (let [sorted-elems
+                 (let [current-elem (dom/getActiveElement js/document)
+                       sorted-elems
                        (->> (cond->
                                 (all-tabinski-children
                                  tabinski-elems
