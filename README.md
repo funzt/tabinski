@@ -1,6 +1,6 @@
 # tabinski
 
-`[org.funzt/tabinski "0.1.0"]` is a ClojureScript library enabling programmers to specify tab order in React based applications declaratively and dynamically in composable fashion.
+`[org.funzt/tabinski "0.1.0-SNAPSHOT"]` is a ClojureScript library enabling programmers to specify tab order in React based applications declaratively and dynamically in composable fashion.
 
 # Why?
 
