@@ -45,7 +45,7 @@
                 (for [y (range 1 4)]
                   (self-coloring-input inst y (* x y)))])))])))))
 
-(defreact readme-example [inst]
+(defreact readme-example []
   :state {:keys [group-3-order]}
   (fn getInitialState []
     {:group-3-order [2 1 3]})
@@ -107,5 +107,5 @@
                               (m/state! this update :group-3-order shuffle))}
          "Shuffle group-3-order"]]))))
 
-(js/React.render (readme-example {})
+(js/React.render (readme-example)
                  (js/document.getElementById "app"))
