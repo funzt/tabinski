@@ -115,18 +115,7 @@
   [{:keys [dom-elem] :as opts} child]
   (fn componentDidMount []
     (let [dom-elem (or dom-elem
-                       (.getDOMNode this))
-          listener-function (fn [e]
-                              (when (== 9 (.-keyCode e))
-                                (.preventDefault e)
-                                (exec-tab (.-shiftKey e))))]
-      (swap! tabinski-state assoc-in
-             [:tabinski-elems dom-elem]
-             (-> opts
-                 (assoc :type :group
-                        :group/listener listener-function)
-                 (rename-keys {:order :group/order
-                               :tab-id :key})))
+                       (.getDOMNode this))]
       ;; Make this this dom element trees master node by stopping all
       ;; group listeners on children
       (run! (fn [dom-elem]
@@ -141,9 +130,25 @@
                        dissoc :group/listener)))
             (direct-tabinski-children (:tabinski-elems @tabinski-state)
                                       dom-elem))
-      (events/listen dom-elem
-                     EventType.KEYDOWN
-                     listener-function)))
+      (swap! tabinski-state assoc-in
+             [:tabinski-elems dom-elem]
+             (-> opts
+                 (assoc :type :group)
+                 (rename-keys {:order :group/order
+                               :tab-id :key})))
+      (when (= (get-tabinski-root (:tabinski-elems @tabinski-state)
+                                  dom-elem)
+               dom-elem)
+        (let [listener-function (fn [e]
+                                  (when (== 9 (.-keyCode e))
+                                    (.preventDefault e)
+                                    (exec-tab (.-shiftKey e))))]
+          (swap! tabinski-state assoc-in
+                 [:tabinski-elems dom-elem :group/listener]
+                 listener-function)
+          (events/listen dom-elem
+                         EventType.KEYDOWN
+                         listener-function)))))
   (fn componentWillReceiveProps [[next-opts]]
     (assert (= (:dom-elem opts)
                (:dom-elem next-opts))

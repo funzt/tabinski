@@ -8,7 +8,7 @@
   (html
     [:div {:style {:border "solid 1px"}} children]))
 
-(defreact self-coloring-input [inst tab-key n]
+(defreact self-coloring-input [tab-key n]
   :state {:keys [focused?]}
   (fn render []
     (tab/tab
@@ -27,11 +27,12 @@
                   (m/set-state! this
                                 :focused? false))}]))))
 
-(defreact main-ui [inst]
+(defreact main-ui []
+  :state {:keys [dynamo-visible?]}
   (fn render []
     (m/with-irefs [s tab/tabinski-state]
       (tab/tab-group
-       {:order [2 1 3]
+       {:order [2 1 :dynamo 3]
         :dom-elem js/document}
        (html
          [:div {:style {:color "green"}} "Hello"
@@ -43,7 +44,18 @@
              (html
                [:div
                 (for [y (range 1 4)]
-                  (self-coloring-input inst y (* x y)))])))])))))
+                  (self-coloring-input y (* x y)))])))
+          (if dynamo-visible?
+            (tab/tab-group
+             {:tab-id :dynamo}
+             (html
+               [:div
+                (for [y (range 1 4)]
+                  (self-coloring-input y (str "dynamo" y)))])))
+          [:button {:on-click
+                    (fn [_]
+                      (m/state! this update :dynamo-visible? not))}
+           "Toggle dynamo"]])))))
 
 (defreact readme-example []
   :state {:keys [group-3-order]}
@@ -107,5 +119,5 @@
                               (m/state! this update :group-3-order shuffle))}
          "Shuffle group-3-order"]]))))
 
-(js/React.render (readme-example)
+(js/React.render (main-ui)
                  (js/document.getElementById "app"))
