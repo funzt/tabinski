@@ -63,8 +63,8 @@
                                          tabinski-elem)))
           (direct-tabinski-children tabinski-elems elem)))
 
-(def ^:private tabinski-state
-  "{:type (:group | :tab | :break)
+(defonce tabinski-state
+  #_"{:type (:group | :tab | :break)
    :group/listener event-listener
    :group/order [key ...]
    :key any-value}"
@@ -143,6 +143,19 @@
       (events/listen dom-elem
                      EventType.KEYDOWN
                      listener-function)))
+  (fn componentWillReceiveProps [[next-opts]]
+    (assert (= (:dom-elem opts)
+               (:dom-elem next-opts))
+            "Can't change global listener dom-elem dynamically")
+    (when-not (= (select-keys next-opts [:tab-id :order])
+                 (select-keys opts [:tab-id :order]))
+      (swap! tabinski-state update-in
+             [:tabinski-elems (or dom-elem
+                                  (.getDOMNode this))]
+             merge
+             (-> next-opts
+                 (rename-keys {:order :group/order
+                               :tab-id :key})))))
   (fn componentWillUnmount []
     (let [cdom-node (.getDOMNode this)]
       (when dom-elem
@@ -164,9 +177,15 @@
                    (assoc-in [:tabinski-elems dom-elem]
                              {:type :tab
                               :key (:tab-id opts)}))))))
+  (fn componentWillReceiveProps [[next-opts]]
+    (when-not (= (select-keys next-opts [:tab-id])
+                 (select-keys opts [:tab-id]))
+      (swap! tabinski-state update-in
+             [:tabinski-elems (.getDOMNode this)]
+             merge
+             {:key (:tab-id next-opts)})))
   (fn componentWillUnmount []
     (swap! tabinski-state
            update :tabinski-elems
            dissoc (.getDOMNode this)))
   (fn render [] child))
-
