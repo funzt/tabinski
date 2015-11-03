@@ -71,14 +71,27 @@
    :key any-value}"
   (atom {}))
 
+(defn focusable-dom-elem
+  "If dom-elem is focusable, returns dom-elem, otherwise the direct or
+  indirect child that is focusable."
+  [dom-elem]
+  (if (dom/isFocusable dom-elem)
+    dom-elem
+    (dom/findNode dom-elem
+                  #(if (dom/isElement %)
+                     (dom/isFocusable %)))))
+
 (defn exec-tab
   "Trigger tabinski effect of tab key press"
   [backwards?]
-  (let [{:keys [current-elem] :as tabinski-elems}
+  (let [{:keys [current-elem tabinski-elems]}
         (swap! tabinski-state
                (fn [{:keys [current-elem tabinski-elems]
                      :as state}]
-                 (let [current-elem (dom/getActiveElement js/document)
+                 (let [current-elem
+                       (let [active (dom/getActiveElement js/document)]
+                         (first (filter #(contains? tabinski-elems %)
+                                        (parents-seq active))))
                        sorted-elems
                        (->> (cond->
                                 (all-tabinski-children
@@ -100,7 +113,9 @@
                              (complement #{current-elem}))
                             (second))
                        (first sorted-elems))))))]
-    (.focus current-elem)))
+    (if-let [do-focus (get-in tabinski-elems [current-elem :do-focus])]
+      (do-focus current-elem)
+      (.focus (focusable-dom-elem current-elem)))))
 
 (defreact tab-group
   "Wrap child in a tab group.  The following opts are supported:
@@ -176,22 +191,14 @@
       (swap! tabinski-state update :tabinski-elems dissoc cdom-node)))
   (fn render [] child))
 
-(defn- focusable-dom-elem
-  "If dom-elem is focusable, returns dom-elem, otherwise the direct or
-  indirect child that is focusable."
-  [dom-elem]
-  (if (dom/isFocusable dom-elem)
-    dom-elem
-    (dom/findNode dom-elem
-                  #(if (dom/isElement %)
-                     (dom/isFocusable %)))))
-
-(defn- add-dom-elem! [elem tab-id]
+(defn- add-dom-elem! [elem {:keys [tab-id
+                                   do-focus]}]
   (swap! tabinski-state
          assoc-in
          [:tabinski-elems elem]
          {:type :tab
-          :key tab-id}))
+          :key tab-id
+          :do-focus do-focus}))
 
 (defn- remove-dom-elem! [elem]
   (swap! tabinski-state
@@ -204,23 +211,30 @@
   supported:
 
   :tab-id - local identifier that can be used in a parent
-            tab-groups :order"
+            tab-groups :order
+
+  :do-focus - If provided a function invoked with the child DOM node
+              implementing custom logic to run on tab key press"
   [opts child]
   :state {:keys [dom-elem]}
   (fn componentDidMount []
-    (let [dom-elem (focusable-dom-elem (js/ReactDOM.findDOMNode this))]
+    (let [dom-elem (js/ReactDOM.findDOMNode this)]
       (m/set-state! this :dom-elem dom-elem)
-      (add-dom-elem! dom-elem (:tab-id opts))))
+      (add-dom-elem! dom-elem opts)))
   (fn componentWillReceiveProps [[next-opts]]
-    (when-not (= (:tab-id next-opts)
-                 (:tab-id opts))
-      (add-dom-elem! dom-elem (:tab-id next-opts))))
+    (when-not (= (select-keys next-opts
+                              [:tab-id
+                               :do-focus])
+                 (select-keys opts
+                              [:tab-id
+                               :do-focus]))
+      (add-dom-elem! dom-elem next-opts)))
   (fn componentDidUpdate []
-    (let [new-dom-elem (focusable-dom-elem (js/ReactDOM.findDOMNode this))]
+    (let [new-dom-elem (js/ReactDOM.findDOMNode this)]
       (when-not (= new-dom-elem dom-elem)
         (m/set-state! this :dom-elem new-dom-elem)
         (remove-dom-elem! dom-elem)
-        (add-dom-elem! new-dom-elem (:tab-id opts)))))
+        (add-dom-elem! new-dom-elem opts))))
   (fn componentWillUnmount []
     (when (= (:current-elem @tabinski-state)
              dom-elem)
