@@ -2,7 +2,8 @@
   (:require [funzt.tabinski :as tab]
             [minreact.core :as m :refer-macros [defreact]]
             [sablono.core :refer-macros [html]]
-            cljsjs.react))
+            [cljsjs.react]
+            [cljsjs.react.dom]))
 
 (defn border-div [& children]
   (html
@@ -14,18 +15,20 @@
     (tab/tab
      {:tab-id tab-key}
      (html
-       [:input {:value n
-                :style {:background-color
-                        (if focused?
-                          "green")}
-                :on-focus
-                (fn [e]
-                  (m/set-state! this
-                                :focused? true))
-                :on-blur
-                (fn [e]
-                  (m/set-state! this
-                                :focused? false))}]))))
+       [:div
+        [:div
+         [:input {:value n
+                  :style {:background-color
+                          (if focused?
+                            "green")}
+                  :on-focus
+                  (fn [e]
+                    (m/set-state! this
+                                  :focused? true))
+                  :on-blur
+                  (fn [e]
+                    (m/set-state! this
+                                  :focused? false))}]]]))))
 
 (defreact main-ui []
   :state {:keys [dynamo-visible?]}
@@ -119,5 +122,5 @@
                               (m/state! this update :group-3-order shuffle))}
          "Shuffle group-3-order"]]))))
 
-(js/React.render (main-ui)
-                 (js/document.getElementById "app"))
+(js/ReactDOM.render (main-ui)
+                    (js/document.getElementById "app"))

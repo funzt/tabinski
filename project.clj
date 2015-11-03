@@ -4,7 +4,9 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.7.0"]
-                 [minreact "0.1.2"]]
+                 [minreact "0.1.2"]
+                 [cljsjs/react "0.14.0-1"]
+                 [cljsjs/react-dom "0.14.0-1"]]
   :profiles
   {:dev
    {:dependencies [[org.clojure/clojurescript "1.7.145"]
