@@ -1,9 +1,10 @@
 (ns funzt.tabinski
   "Tab-friendliness in React based applications"
-  (:require [minreact.core :refer-macros [defreact]]
+  (:require [minreact.core :refer-macros [defreact] :as m]
             [goog.events :as events]
             [goog.dom :as dom]
-            [clojure.set :refer [rename-keys]])
+            [clojure.set :refer [rename-keys]]
+            [cljsjs.react.dom])
   (:import [goog.events KeyHandler EventType]))
 
 (defn- parents-seq
@@ -115,7 +116,10 @@
   [{:keys [dom-elem] :as opts} child]
   (fn componentDidMount []
     (let [dom-elem (or dom-elem
-                       (.getDOMNode this))]
+                       (js/ReactDOM.findDOMNode this))]
+      ;; TODO: prevent this from throwing in direct-tabinski-children
+      ;; when dom-elem is nil
+      
       ;; Make this this dom element trees master node by stopping all
       ;; group listeners on children
       (run! (fn [dom-elem]
@@ -157,13 +161,13 @@
                  (select-keys opts [:tab-id :order]))
       (swap! tabinski-state update-in
              [:tabinski-elems (or dom-elem
-                                  (.getDOMNode this))]
+                                  (js/ReactDOM.findDOMNode this))]
              merge
              (-> next-opts
                  (rename-keys {:order :group/order
                                :tab-id :key})))))
   (fn componentWillUnmount []
-    (let [cdom-node (.getDOMNode this)]
+    (let [cdom-node (js/ReactDOM.findDOMNode this)]
       (when dom-elem
         (events/unlisten dom-elem
                          EventType.KEYDOWN
@@ -172,6 +176,29 @@
       (swap! tabinski-state update :tabinski-elems dissoc cdom-node)))
   (fn render [] child))
 
+(defn- focusable-dom-elem
+  "If dom-elem is focusable, returns dom-elem, otherwise the direct or
+  indirect child that is focusable."
+  [dom-elem]
+  (if (dom/isFocusable dom-elem)
+    dom-elem
+    (dom/findNode dom-elem
+                  #(if (dom/isElement %)
+                     (dom/isFocusable %)))))
+
+(defn- add-dom-elem! [elem tab-id]
+  (swap! tabinski-state
+         assoc-in
+         [:tabinski-elems elem]
+         {:type :tab
+          :key tab-id}))
+
+(defn- remove-dom-elem! [elem]
+  (swap! tabinski-state
+         update
+         :tabinski-elems
+         dissoc elem))
+
 (defreact tab
   "Must wrap a child that can be focused.  The following opts are
   supported:
@@ -179,28 +206,24 @@
   :tab-id - local identifier that can be used in a parent
             tab-groups :order"
   [opts child]
+  :state {:keys [dom-elem]}
   (fn componentDidMount []
-    ;; add child to tabinski-elems
-    (let [dom-elem (.getDOMNode this)]
-      (swap! tabinski-state
-             (fn [tabinski-state]
-               (-> tabinski-state
-                   #_(update :current-elem #(or % dom-elem))
-                   (assoc-in [:tabinski-elems dom-elem]
-                             {:type :tab
-                              :key (:tab-id opts)}))))))
+    (let [dom-elem (focusable-dom-elem (js/ReactDOM.findDOMNode this))]
+      (m/set-state! this :dom-elem dom-elem)
+      (add-dom-elem! dom-elem (:tab-id opts))))
   (fn componentWillReceiveProps [[next-opts]]
-    (when-not (= (select-keys next-opts [:tab-id])
-                 (select-keys opts [:tab-id]))
-      (swap! tabinski-state update-in
-             [:tabinski-elems (.getDOMNode this)]
-             merge
-             {:key (:tab-id next-opts)})))
+    (when-not (= (:tab-id next-opts)
+                 (:tab-id opts))
+      (add-dom-elem! dom-elem (:tab-id next-opts))))
+  (fn componentDidUpdate []
+    (let [new-dom-elem (focusable-dom-elem (js/ReactDOM.findDOMNode this))]
+      (when-not (= new-dom-elem dom-elem)
+        (m/set-state! this :dom-elem new-dom-elem)
+        (remove-dom-elem! dom-elem)
+        (add-dom-elem! new-dom-elem (:tab-id opts)))))
   (fn componentWillUnmount []
     (when (= (:current-elem @tabinski-state)
-             (.getDOMNode this))
+             dom-elem)
       (exec-tab false))
-    (swap! tabinski-state
-           update :tabinski-elems
-           dissoc (.getDOMNode this)))
+    (remove-dom-elem! dom-elem))
   (fn render [] child))
