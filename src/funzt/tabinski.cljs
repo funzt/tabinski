@@ -114,7 +114,7 @@
                             (second))
                        (first sorted-elems))))))]
     (if-let [do-focus (get-in tabinski-elems [current-elem :do-focus])]
-      (do-focus current-elem)
+      (do-focus nil #_current-elem)
       (.focus (focusable-dom-elem current-elem)))))
 
 (defreact tab-group
@@ -213,8 +213,9 @@
   :tab-id - local identifier that can be used in a parent
             tab-groups :order
 
-  :do-focus - If provided a function invoked with the child DOM node
-              implementing custom logic to run on tab key press"
+  :do-focus - If provided a function invoked with nil (currently a
+              reserved argument) implementing custom logic to run on
+              tab key press"
   [opts child]
   :state {:keys [dom-elem]}
   (fn componentDidMount []
